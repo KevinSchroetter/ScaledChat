@@ -1,0 +1,87 @@
+﻿<!--
+/*
+ * @author Philipp Bahnmüller (742233), Kevin Schrötter (742082)
+ */ 
+ -->
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<title>Chat login</title>
+</head>
+<body>
+<h3>Chat Login</h3>
+<form action="" autocomplete="off">
+	Username: <input id="username" type="text" maxlength="30"><h5 id="error" autocomplete="off"></h5>
+	Password: <input id="password" type="password" maxlength="30" autocomplete="off">
+	<button>Login</button><br>
+	<input id="checkbox" type="checkbox" value="false"> New User?
+</form>
+
+<script src="https://cdn.socket.io/socket.io-1.2.0.js" type="text/javascript"></script>
+<script src="jQuery/jquery.js" type="text/javascript"></script>
+<script src="functions.js" type="text/javascript"></script>
+<script type="text/javascript">
+	
+	$(function(){
+		var socket = io();
+		$('form').submit(function(){
+			var checked;
+			if($('#checkbox').is(':checked')){
+				checked = "true";
+			}
+			else{
+				checked = "false";
+			}
+			var loginname = $('#username').val();
+			loginname = $.trim(loginname);
+			console.log("length: "+loginname.length + " Lengthtest: "+(loginname.length <= 3));
+			if(loginname.length < 3){
+				$('#error').text('Username must at least contain 3 characters!');
+				return false;
+			}
+			else{			
+				if(!regExCheckText(loginname)){
+					$('#error').text('Username contains invalid characters!');
+					return false;
+				}
+				else{
+					var pw = $('#password').val();
+					pw = $.trim(pw);
+					if(pw.length < 3){
+						$('#error').text('Password must at least contain 3 characters!');
+						return false;
+					}
+					else{
+						if(!regExCheckPW(pw)){
+							$('#error').text('Password contains invalid characters!');
+							return false;
+						}
+					}
+										
+					sessionStorage.setItem('username',loginname);
+					socket.emit('login request',{username: loginname,password: $('#password').val(),newuser: checked});
+					$('#username').val('');
+					$('#password').val('');
+					$('#checkbox').attr('checked',false);
+					return false;
+				}
+			}
+		});
+		
+		socket.on('login response',function(data){
+			if(data.successful === "true"){
+				console.log('login successful');
+				document.location.href = "chat";
+			}
+			else{
+				$('#error').text(data.reason);
+			}
+		});
+	});
+		
+	
+</script>
+</body>
+</html>

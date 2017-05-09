@@ -1,0 +1,145 @@
+﻿<!--
+/*
+ * @author Philipp Bahnmüller (742233), Kevin Schrötter (742082)
+ */ 
+ -->
+
+<!DOCTYPE html>
+<html>
+  <head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <title>CCSS2017 Chat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+      #messages { margin-bottom: 40px }
+    </style>
+  </head>
+  <body>
+  	<br>
+  	<h3 id="user"></h3>
+  	<br>
+    <ul id="messages"></ul>
+    <form action="" autocomplete="off">
+      <input id="m" autocomplete="off" /><button>Send</button>
+    </form>
+    <script src="https://cdn.socket.io/socket.io-1.2.0.js" type="text/javascript"></script>
+    <script src="jQuery/jquery.js" type="text/javascript"></script>
+	<script src="functions.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      $(function () {
+	  if((!sessionStorage.getItem('username'))||(sessionStorage.getItem('username')==null)){
+		alert("Sorry, you are not logged in! You are redirected to the login site");
+		document.location.href = "login";
+	  }
+	  else{
+		console.log("Login ok");
+	  
+    	$('#user').text('Logged in as '+sessionStorage.getItem('username'));
+    	  
+   	  	function getFormattedDate() {
+   		    var date = new Date();
+   		    var hours = date.getHours();
+   		    var minutes = date.getMinutes();
+   		   	
+   		    if(hours < 10){
+   		    	hours = '0'+hours;
+   		    }
+   		    if(minutes < 10){
+   		    	minutes = '0'+minutes;
+   		    }
+   		    var str = hours+':'+minutes;
+   		    return str;
+   		} 
+    	  
+        var socket = io();
+        
+        socket.emit('validate user',sessionStorage.getItem('username'));
+        
+        $('form').submit(function(){
+        	var message = $('#m').val();
+        	if(message.startsWith('/')){
+        		var splitted = message.split(' ');
+        		
+        		switch(splitted[0]){
+        		case '/private':
+        			if(splitted.length < 3){
+        				$('#messages').append($('<li>').text('Wrong Syntax!'));
+        		          window.scrollTo(0, document.body.scrollHeight);
+        			}
+        			else{
+        				message = message.replace(splitted[0],'');
+        				message = message.replace(splitted[1],'');
+						message = pbksValidate(message);
+						message = getFormattedDate()+' (Private) '+sessionStorage.getItem('username')+': '+message;
+						messageDisplay = message;
+        				messageDisplay = getFormattedDate()+' (Private) '+sessionStorage.getItem('username')+' to '+splitted[1]+': '+message;
+            			socket.emit('private message',{to: splitted[1],msg: message}); 
+            			$('#messages').append($('<li style="color:purple;">').text(messageDisplay));
+                      	window.scrollTo(0, document.body.scrollHeight);
+        			}        			       			
+        			break;
+        		case '/list':
+        			socket.emit('get usernames');
+        			break;
+        		default:
+        			break;
+        		};
+        	}
+        	else{
+        		message = getFormattedDate()+' '+sessionStorage.getItem('username')+': '+message;
+				socket.emit('chat message',{msg: message});
+				message = pbksValidate(message);
+        		$('#messages').append($('<li style="font-weight:bold;">').text(message));
+              	window.scrollTo(0, document.body.scrollHeight);
+        	}
+          
+          $('#m').val('');
+          return false;
+        });
+      
+        socket.on('chat message', function(msg){
+			msg.msg = pbksValidate(msg.msg);
+			$('#messages').append($('<li>').text(msg.msg));
+			window.scrollTo(0, document.body.scrollHeight);
+        });
+        
+        socket.on('private message',function(msg){
+			msg.msg = pbksValidate(msg.msg);
+         	$('#messages').append($('<li style="color:purple;">').text(msg.msg));
+          	window.scrollTo(0, document.body.scrollHeight);
+        });
+        
+        socket.on('error message',function(msg){
+        	$('#messages').append($('<li style="color:red;font-weight:bold;">').text(msg.msg));
+          	window.scrollTo(0, document.body.scrollHeight);
+        });
+        
+        socket.on('get usernames',function(usernames){
+        	$('#messages').append($('<li style="color:orange;font-weight:bold;">').text('--------'+getFormattedDate()+'--------'));
+        	$('#messages').append($('<li style="color:blue;font-weight:bold;">').text('List of Users'));
+        	$('#messages').append($('<li style="font-weight:bold;">').text(usernames));
+        	$('#messages').append($('<li style="color:orange;font-weight:bold;">').text('---------------------'));
+          	window.scrollTo(0, document.body.scrollHeight);
+        });
+        
+        socket.on('user connect',function(data){
+        	$('#messages').append($('<li style="color:green;font-style:italic;">').text(getFormattedDate()+' '+data));
+          	window.scrollTo(0, document.body.scrollHeight);
+        });
+        
+        socket.on('user disconnect',function(username){
+        	$('#messages').append($('<li style="color:red;font-style:italic;">').text(getFormattedDate()+' '+username));
+          	window.scrollTo(0, document.body.scrollHeight);
+        });
+       } 
+	});
+    </script>
+  </body>
+</html>
